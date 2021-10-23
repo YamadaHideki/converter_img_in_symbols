@@ -17,6 +17,7 @@ public class Converter implements TextGraphicsConverter {
     Schema schema = new Schema();
     private int maxWidth = 0;
     private int maxHeight = 0;
+    private double maxRatio = 0;
 
     @Override
     public String convert(String url) throws IOException, BadImageSizeException {
@@ -25,6 +26,16 @@ public class Converter implements TextGraphicsConverter {
 
         int width = img.getWidth();
         int height = img.getHeight();
+
+        double ratioWidth = (double) width / height;
+        double ratioHeight = (double) height / width;
+        double ratio = Math.max(ratioWidth, ratioHeight);
+        System.out.println(ratio + " - " + maxRatio);
+
+        if (maxRatio > 0) {
+            System.out.println("yes");
+            throw new BadImageSizeException(ratio, maxRatio);
+        }
 
         // Получить правильный размер сжатия, пропорционально.
         /*
@@ -124,7 +135,7 @@ public class Converter implements TextGraphicsConverter {
 
     @Override
     public void setMaxRatio(double maxRatio) {
-
+        this.maxRatio = maxRatio;
     }
 
     @Override
