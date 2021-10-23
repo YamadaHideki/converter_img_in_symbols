@@ -15,6 +15,8 @@ import java.net.URL;
 public class Converter implements TextGraphicsConverter {
 
     Schema schema = new Schema();
+    private int maxWidth = 0;
+    private int maxHeight = 0;
 
     @Override
     public String convert(String url) throws IOException, BadImageSizeException {
@@ -23,6 +25,26 @@ public class Converter implements TextGraphicsConverter {
 
         int width = img.getWidth();
         int height = img.getHeight();
+
+        // Получить правильный размер сжатия, пропорционально.
+        /*
+            W / w = H / h
+            h = H * w / W
+            w = W * h / H
+         */
+
+        /*
+        * Ужмем картинку по найденому коэфициенту
+        */
+        if ((maxWidth < width && maxWidth != 0) || (maxHeight < height && maxHeight != 0)) {
+            double k = Math.max((double) width / maxWidth, (double) height / maxHeight);
+            System.out.println("w: " + width + ", h: " + height);
+            System.out.println("k1: " + (double) width / maxWidth + ", k2: " + (double) height / maxHeight);
+            width = (int) (width / k);
+            height = (int) (height / k);
+        }
+        System.out.println("w: " + width + " h: " + height);
+
 
         // Если конвертер попросили проверять на максимально допустимое
         // соотношение сторон изображения, то вам здесь надо сделать эту проверку,
@@ -47,7 +69,7 @@ public class Converter implements TextGraphicsConverter {
         // Последний параметр означает, что мы просим картинку плавно сузиться
         // на новые размеры. В результате мы получаем ссылку на новую картинку, которая
         // представляет собой суженную старую.
-        //Image scaledImage = img.getScaledInstance(newWidth, newHeight, BufferedImage.SCALE_SMOOTH);
+        Image scaledImage = img.getScaledInstance(width, height, BufferedImage.SCALE_SMOOTH);
 
         // Теперь сделаем её чёрно-белой. Для этого поступим так:
         // Создадим новую пустую картинку нужных размеров, заранее указав последним
@@ -56,7 +78,7 @@ public class Converter implements TextGraphicsConverter {
         // Попросим у этой картинки инструмент для рисования на ней:
         Graphics2D graphics = bwImg.createGraphics();
         // А этому инструменту скажем, чтобы он скопировал содержимое из нашей суженной картинки:
-        graphics.drawImage(img, 0, 0, null);
+        graphics.drawImage(scaledImage, 0, 0, null);
 
         // Теперь в bwImg у нас лежит чёрно-белая картинка нужных нам размеров.
         // Вы можете отслеживать каждый из этапов, просто в любом удобном для
@@ -68,33 +90,15 @@ public class Converter implements TextGraphicsConverter {
         // Если для рисования мы просили у картинки .createGraphics(),
         // то для прохода по пикселям нам нужен будет этот инструмент:
         WritableRaster bwRaster = bwImg.getRaster();
-
-        // Он хорош тем, что у него мы можем спросить пиксель на нужных
-        // нам координатах, указав номер столбца (w) и строки (h)
-        // int color = bwRaster.getPixel(w, h, new int[3])[0];
-        // Выглядит странно? Согласен. Сам возвращаемый методом пиксель — это
-        // массив из трёх интов, обычно это интенсивность красного, зелёного и синего.
-        // Но у нашей чёрно-белой картинки цветов нет, и нас интересует
-        // только первое значение в массиве. Вы спросите, а зачем
-        // мы ещё параметром передаём интовый массив на три ячейки?
-        // Дело в том, что этот метод не хочет создавать его сам и просит
-        // вас сделать это, а сам метод лишь заполнит его и вернёт.
-        // Потому что создавать массивы каждый раз слишком медленно. Вы можете создать
-        // массив один раз, сохранить в переменную и передавать один
-        // и тот же массив в метод, ускорив тем самым программу.
-
-        // Вам осталось пробежаться двойным циклом по всем столбцам (ширина)
-        // и строкам (высота) изображения, на каждой внутренней итерации
-        // получить степень белого пикселя (int color выше) и по ней
-        // получить соответствующий символ c. Логикой превращения цвета
-        // в символ будет заниматься другой объект, который мы рассмотрим ниже
-
+        int[] casheArray = new int[3];
         StringBuilder sb = new StringBuilder();
-        for (int i = 1; i < bwRaster.getHeight(); i++) {
-            for (int j = 1; j < bwRaster.getWidth(); j++) {
-                int color = bwRaster.getPixel(i, j, new int[3])[0];
+
+
+        for (int i = 0; i <= (bwRaster.getHeight() - 1); i++) {
+            for (int j = 0; j < (bwRaster.getWidth() - 1); j++) {
+                int color = bwRaster.getPixel(j, i, casheArray)[0];
                 char c = schema.convert(color);
-                sb.append("fd");
+                sb.append(c).append(c);
             //??? //запоминаем символ c, например, в двумерном массиве или как-то ещё на ваше усмотрение
             }
             sb.append("<br>");
@@ -110,12 +114,12 @@ public class Converter implements TextGraphicsConverter {
 
     @Override
     public void setMaxWidth(int width) {
-
+        this.maxWidth = width;
     }
 
     @Override
     public void setMaxHeight(int height) {
-
+        this.maxHeight = height;
     }
 
     @Override
