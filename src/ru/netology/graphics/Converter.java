@@ -14,7 +14,7 @@ import java.net.URL;
 
 public class Converter implements TextGraphicsConverter {
 
-    TextColorSchema schema = new Schema();
+    private TextColorSchema schema = new Schema();
     private int maxWidth = 0;
     private int maxHeight = 0;
     private double maxRatio = 0;
